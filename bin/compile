@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 indent() {
   sed -u 's/^/       /'
@@ -6,18 +6,87 @@ indent() {
 
 echo "-----> Install ffmpeg"
 BUILD_DIR=$1
-VENDOR_DIR="vendor"
-DOWNLOAD_URL="http://flect.github.io/heroku-binaries/libs/ffmpeg.tar.gz"
+CACHE_DIR=$2
+VENDOR_DIR="$BUILD_DIR/vendor"
+INSTALL_DIR="$VENDOR_DIR/ffmpeg"
+CACHE_FILE="$CACHE_DIR/ffmpeg.tar.gz"
 
-echo "DOWNLOAD_URL = " $DOWNLOAD_URL | indent
+if [ ! -f $CACHE_FILE ]; then
+  mkdir -p $VENDOR_DIR
+  mkdir -p $INSTALL_DIR
 
-cd $BUILD_DIR
-mkdir -p $VENDOR_DIR
-cd $VENDOR_DIR
-curl -L --silent $DOWNLOAD_URL | tar xz
+  cd $BUILD_DIR
+  echo "Install yasm" | indent
+  wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
+  tar zxf yasm-1.3.0.tar.gz
+  cd yasm-1.3.0/
+  ./configure --prefix="$BUILD_DIR" --bindir="$INSTALL_DIR"
+  make
+  make install
+  make distclean
 
-echo "exporting PATH and LIBRARY_PATH" | indent
+  cd $BUILD_DIR
+  echo "Install x264" | indent
+  wget http://download.videolan.org/pub/x264/snapshots/last_x264.tar.bz2
+  bunzip2 last_x264.tar.bz2
+  tar xf last_x264.tar
+  cd x264-snapshot*
+  PATH="$INSTALL_DIR:$PATH" ./configure --prefix="$BUILD_DIR" --bindir="$INSTALL_DIR" --enable-static --disable-opencl
+  PATH="$INSTALL_DIR:$PATH" make
+  make install
+  make distclean
+
+  cd $BUILD_DIR
+  echo "Install libvpx" | indent
+  wget http://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvpx-1.6.0.tar.bz2
+  bunzip2 libvpx-1.6.0.tar.bz2
+  tar xf libvpx-1.6.0.tar
+  cd libvpx-1.6.0/
+  PATH="$INSTALL_DIR:$PATH" ./configure --prefix="$BUILD_DIR" --disable-examples --disable-unit-tests
+  PATH="$INSTALL_DIR:$PATH" make
+  make install
+  make distclean
+
+  cd $BUILD_DIR
+  echo "Install ffmpeg" | indent
+  wget http://ffmpeg.org/releases/ffmpeg-3.2.2.tar.bz2
+  bunzip2 ffmpeg-3.2.2.tar.bz2
+  tar xf ffmpeg-3.2.2.tar
+  cd ffmpeg-3.2.2/
+  PATH="$INSTALL_DIR:$PATH" PKG_CONFIG_PATH="$BUILD_DIR/lib/pkgconfig" ./configure \
+    --prefix="$BUILD_DIR" \
+    --pkg-config-flags="--static" \
+    --extra-cflags="-I$BUILD_DIR/include" \
+    --extra-ldflags="-L$BUILD_DIR/lib" \
+    --bindir="$INSTALL_DIR" \
+    --enable-gpl \
+    --enable-nonfree \
+    --enable-libvpx \
+    --enable-libx264 \
+    --disable-ffplay \
+    --disable-ffprobe \
+    --disable-ffserver \
+    --disable-avdevice
+  PATH="$INSTALL_DIR:$PATH" make
+  make install
+  make distclean
+  hash -r
+
+  # cache for future deploys
+  echo "-----> Caching ImageMagick installation"
+  cd $VENDOR_DIR
+  REL_INSTALL_DIR="ffmpeg"
+  tar czf $REL_INSTALL_DIR.tar.gz $REL_INSTALL_DIR
+  mv $REL_INSTALL_DIR.tar.gz $CACHE_FILE
+else
+  # cache exists, extract it
+  echo "-----> Extracting ffmpeg $CACHE_FILE => $VENDOR_DIR"
+  tar xJf $CACHE_FILE -C $VENDOR_DIR
+fi
+
+# update PATH
+echo "-----> Updating environment variables"
 PROFILE_PATH="$BUILD_DIR/.profile.d/ffmpeg.sh"
+ACTUAL_INSTALL_PATH="$HOME/vendor/ffmpeg"
 mkdir -p $(dirname $PROFILE_PATH)
-echo 'export PATH="$PATH:$HOME/vendor/ffmpeg/bin"' >> $PROFILE_PATH
-echo 'export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$HOME/vendor/ffmpeg/lib"' >> $PROFILE_PATH
+echo "export PATH=$ACTUAL_INSTALL_PATH:\$PATH" >> $PROFILE_PATH
