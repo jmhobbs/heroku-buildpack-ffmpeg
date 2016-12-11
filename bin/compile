@@ -1,4 +1,7 @@
 #!/bin/bash
+set -o errexit
+set -o nounset
+set -o pipefail
 
 indent() {
   sed -u 's/^/       /'
@@ -81,7 +84,7 @@ if [ ! -f $CACHE_FILE ]; then
 else
   # cache exists, extract it
   echo "-----> Extracting ffmpeg $CACHE_FILE => $VENDOR_DIR"
-  tar xJf $CACHE_FILE -C $VENDOR_DIR
+  tar xzvf $CACHE_FILE -C $VENDOR_DIR
 fi
 
 # update PATH
