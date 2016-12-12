@@ -93,5 +93,5 @@ fi
 
 # update PATH
 echo "-----> Updating environment variables"
-mkdir -p "$PROFILE_PATH"
+mkdir -p "$BUILD_DIR/.profile.d/"
 echo "export PATH=$ACTUAL_INSTALL_PATH:\$PATH" >> "$PROFILE_PATH"
