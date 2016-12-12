@@ -13,12 +13,16 @@ CACHE_DIR=$2
 VENDOR_DIR="$BUILD_DIR/vendor"
 INSTALL_DIR="$VENDOR_DIR/ffmpeg"
 CACHE_FILE="$CACHE_DIR/ffmpeg.tar.gz"
+PROFILE_PATH="$BUILD_DIR/.profile.d/ffmpeg.sh"
+ACTUAL_INSTALL_PATH="$HOME/vendor/ffmpeg"
 
-if [ ! -f $CACHE_FILE ]; then
-  mkdir -p $VENDOR_DIR
-  mkdir -p $INSTALL_DIR
+if [ ! -f "$CACHE_FILE" ]; then
+  echo "!!! This could take a while. !!!" | indent
 
-  cd $BUILD_DIR
+  mkdir -p "$VENDOR_DIR"
+  mkdir -p "$INSTALL_DIR"
+
+  cd "$BUILD_DIR"
   echo "Install yasm" | indent
   wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz
   tar zxf yasm-1.3.0.tar.gz
@@ -28,7 +32,7 @@ if [ ! -f $CACHE_FILE ]; then
   make install
   make distclean
 
-  cd $BUILD_DIR
+  cd "$BUILD_DIR"
   echo "Install x264" | indent
   wget http://download.videolan.org/pub/x264/snapshots/last_x264.tar.bz2
   bunzip2 last_x264.tar.bz2
@@ -39,7 +43,7 @@ if [ ! -f $CACHE_FILE ]; then
   make install
   make distclean
 
-  cd $BUILD_DIR
+  cd "$BUILD_DIR"
   echo "Install libvpx" | indent
   wget http://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvpx-1.6.0.tar.bz2
   bunzip2 libvpx-1.6.0.tar.bz2
@@ -50,7 +54,7 @@ if [ ! -f $CACHE_FILE ]; then
   make install
   make distclean
 
-  cd $BUILD_DIR
+  cd "$BUILD_DIR"
   echo "Install ffmpeg" | indent
   wget http://ffmpeg.org/releases/ffmpeg-3.2.2.tar.bz2
   bunzip2 ffmpeg-3.2.2.tar.bz2
@@ -77,19 +81,17 @@ if [ ! -f $CACHE_FILE ]; then
 
   # cache for future deploys
   echo "-----> Caching ffmpeg installation"
-  cd $VENDOR_DIR
+  cd "$VENDOR_DIR"
   REL_INSTALL_DIR="ffmpeg"
-  tar czf $REL_INSTALL_DIR.tar.gz $REL_INSTALL_DIR
-  mv $REL_INSTALL_DIR.tar.gz $CACHE_FILE
+  tar czf "$REL_INSTALL_DIR.tar.gz" "$REL_INSTALL_DIR"
+  mv "$REL_INSTALL_DIR.tar.gz" "$CACHE_FILE"
 else
   # cache exists, extract it
   echo "-----> Extracting ffmpeg $CACHE_FILE => $VENDOR_DIR"
-  tar xzvf $CACHE_FILE -C $VENDOR_DIR
+  tar xzf "$CACHE_FILE" -C "$VENDOR_DIR"
 fi
 
 # update PATH
 echo "-----> Updating environment variables"
-PROFILE_PATH="$BUILD_DIR/.profile.d/ffmpeg.sh"
-ACTUAL_INSTALL_PATH="$HOME/vendor/ffmpeg"
-mkdir -p $(dirname $PROFILE_PATH)
-echo "export PATH=$ACTUAL_INSTALL_PATH:\$PATH" >> $PROFILE_PATH
+mkdir -p "$PROFILE_PATH"
+echo "export PATH=$ACTUAL_INSTALL_PATH:\$PATH" >> "$PROFILE_PATH"
